@@ -130,6 +130,11 @@ app.layout = html.Div(
                                         for year in YEARS
                                     },
                                 ),
+								dcc.Interval(
+									id='interval-component',
+									interval=10*1000, # in milliseconds
+									n_intervals=0
+								),
                             ],
                         ),
                         html.Div(
@@ -216,6 +221,12 @@ app.layout = html.Div(
         ),
     ],
 )
+
+
+@app.callback(Output('years-slider', 'value'),
+              [Input('interval-component', 'n_intervals')])
+def update_slider(n):
+	return YEARS[n%13]
 
 
 @app.callback(
@@ -323,23 +334,28 @@ def update_map_title(year):
     ],
 )
 def display_selected_data(selectedData, chart_dropdown, year):
+    #if selectedData is None:
+    #    return dict(
+    #        data=[dict(x=0, y=0)],
+    #        layout=dict(
+    #            title="Click-drag on the map to select counties",
+    #            paper_bgcolor="#1f2630",
+    #            plot_bgcolor="#1f2630",
+    #            font=dict(color="#2cfec1"),
+    #            margin=dict(t=75, r=50, b=100, l=75),
+    #        ),
+    #    )
+    
     if selectedData is None:
-        return dict(
-            data=[dict(x=0, y=0)],
-            layout=dict(
-                title="Click-drag on the map to select counties",
-                paper_bgcolor="#1f2630",
-                plot_bgcolor="#1f2630",
-                font=dict(color="#2cfec1"),
-                margin=dict(t=75, r=50, b=100, l=75),
-            ),
-        )
-    pts = selectedData["points"]
-    fips = [str(pt["text"].split("<br>")[-1]) for pt in pts]
-    for i in range(len(fips)):
-        if len(fips[i]) == 4:
-            fips[i] = "0" + fips[i]
-    dff = df_full_data[df_full_data["County Code"].isin(fips)]
+        dff = df_full_data
+    else:
+        pts = selectedData["points"]
+        fips = [str(pt["text"].split("<br>")[-1]) for pt in pts]
+        for i in range(len(fips)):
+            if len(fips[i]) == 4:
+                fips[i] = "0" + fips[i]
+        dff = df_full_data[df_full_data["County Code"].isin(fips)]
+    
     dff = dff.sort_values("Year")
 
     regex_pat = re.compile(r"Unreliable", flags=re.IGNORECASE)
@@ -448,4 +464,4 @@ def display_selected_data(selectedData, chart_dropdown, year):
 
 
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    app.run_server(debug=True, host='0.0.0.0', port=5002)
